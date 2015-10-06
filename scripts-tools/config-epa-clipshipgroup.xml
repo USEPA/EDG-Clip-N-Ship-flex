@@ -1,0 +1,356 @@
+<?xml version="1.0" ?>
+<!--
+////////////////////////////////////////////////////////////////////////////////
+Clip N Ship EDG - V3.5.1
+////////////////////////////////////////////////////////////////////////////////
+-->
+<configuration>	
+    <title>EPA</title>
+    <subtitle>Clip N Ship Application</subtitle>
+    <logo>assets/images/EPA_Logo1.png</logo>
+    <style>
+        <colors>0xFFFFFF,0x2e4fb3,0x27394c,0x101010,0xFFFFFF</colors>
+        <alpha>0.9</alpha>
+    </style>
+    <geometryservice url="http://tasks.arcgisonline.com/ArcGIS/rest/services/Geometry/GeometryServer" />
+    <bing key="AhiDMIc9x-kxGH0hIlko0DvZPzNL8_LhGnbE8DxcN9n5l8Dgn9_VgiwCc8NRlH7g"/>
+
+    <widget left="10"  top="60" config="widgets/Navigation/NavigationWidget.xml" url="widgets/Navigation/NavigationWidget.swf"/>
+    <widget right="-2" bottom="-2" config="widgets/OverviewMap/OverviewMapWidget.xml" url="widgets/OverviewMap/OverviewMapWidget.swf"/>
+    <widget right="20" top="55" config="widgets/MapSwitcher/MapSwitcherWidget.xml" url="widgets/MapSwitcher/MapSwitcherWidget.swf"/>
+    <widget left="0"   top="0" config="widgets/HeaderController/HeaderControllerWidget.xml" url="widgets/HeaderController/HeaderControllerWidget.swf"/>
+    <widget right="6" top="5" config="widgets/FullScreen/FullScreenWidget.xml" url="widgets/FullScreen/FullScreenWidget.swf"/>
+    <widget left="8"  top="20" config="widgets/CoordinateMenu/CoordinateMenuWidget.xml" url="widgets/CoordinateMenu/CoordinateMenuWidget.swf"/>
+    <widget left="10"  top="45"  config="widgets/Coordinate/CoordinateWidget.xml" url="widgets/Coordinate/CoordinateWidget.swf"/>
+    <widget left="3" bottom="45" config="widgets/ExportMap/exportMap.xml" url="widgets/ExportMap/exportMap.swf"/>
+    <map wraparound180="true" initialextent="-16730000 1619000 -4764000 7743000" fullextent="-16730000 1619000 -4764000 7743000"  top="40">
+       
+        <basemaps>
+            <layer label="Streets" type="tiled" visible="true"  alpha="1" icon="assets/images/basemap_natgeo.jpg" 
+            	   url="http://services.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer"/>
+            <layer label="Aerial" type="tiled" visible="false" icon="assets/images/basemap_imagery.jpg"
+                   url="http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer"/>
+            <layer label="Topo" type="tiled" visible="false" icon="assets/images/basemap_topographic.jpg"
+                   url="http://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer"/>
+        </basemaps>   
+        
+        <operationallayers>     
+        
+        <layer label="Data" type="dynamic" visible="true" 
+                   url="https://edg-staging.epa.gov/arcgis/rest/services/edgGroup/MapServer">  
+                   
+			<!-- Nation Wide -->
+			<sublayer id="1" popupconfig="popups/FRS/PopupFRSACRES.xml"/>
+			<sublayer id="2" popupconfig="popups/FRS/PopupFRSAIRS_AFS.xml"/>
+			<sublayer id="3" popupconfig="popups/FRS/PopupFRSAIRS_AFS_MAJOR.xml"/>
+            
+			<sublayer id="5" popupconfig="popups/FRS/PopupFRSBIA.xml"/>
+			<sublayer id="6" popupconfig="popups/FRS/PopupFRSBRAC.xml"/>
+			<sublayer id="7" popupconfig="popups/FRS/PopupFRSCAMDBS.xml"/>
+			<sublayer id="8" popupconfig="popups/FRS/PopupFRSCERCLIS.xml"/>
+			<sublayer id="9" popupconfig="popups/FRS/PopupFRSCERCLIS_NPL.xml"/>
+			<sublayer id="10" popupconfig="popups/FRS/PopupFRSFRP.xml"/>
+			<sublayer id="11" popupconfig="popups/FRS/PopupFRSICIS.xml"/>
+			<sublayer id="12" popupconfig="popups/FRS/PopupFRSNCDB.xml"/>
+			<sublayer id="13" popupconfig="popups/FRS/PopupFRSNCES.xml"/>
+			<sublayer id="14" popupconfig="popups/FRS/PopupFRSNEI.xml"/>
+			<sublayer id="15" popupconfig="popups/FRS/PopupFRSNEPT.xml"/>
+			<sublayer id="16" popupconfig="popups/FRS/PopupFRSPCS.xml"/>
+			<sublayer id="17" popupconfig="popups/FRS/PopupFRSPCS_MAJOR.xml"/>
+			<sublayer id="18" popupconfig="popups/FRS/PopupFRSRADINFO.xml"/>
+			<sublayer id="19" popupconfig="popups/FRS/PopupFRSRBLC.xml"/>
+			<sublayer id="20" popupconfig="popups/FRS/PopupFRSRCRA.xml"/>
+			<sublayer id="21" popupconfig="popups/FRS/PopupFRSRCRA_ACTIVE.xml"/>
+			<sublayer id="22" popupconfig="popups/FRS/PopupFRSRCRA_INACTIVE.xml"/>
+			<sublayer id="23" popupconfig="popups/FRS/PopupFRSRCRA_LQG.xml"/>
+			<sublayer id="24" popupconfig="popups/FRS/PopupFRSRCRA_TRANS.xml"/>
+			<sublayer id="25" popupconfig="popups/FRS/PopupFRSRCRA_TSD.xml"/>
+			<sublayer id="26" popupconfig="popups/FRS/PopupFRSSDWIS.xml"/>
+			<sublayer id="27" popupconfig="popups/FRS/PopupFRSTRI.xml"/>
+			<sublayer id="28" popupconfig="popups/Nat/PopupNatquads6k_us20070104.xml"/>
+			<sublayer id="29" popupconfig="popups/Nat/PopupNatcofips_upp.xml"/>
+			
+			<sublayer id="31" popupconfig="popups/Nat/PopupNatSmart_Location_DB_v02b.xml"/>
+			
+			<!-- OW -->
+			
+            <sublayer id="33" popupconfig="popups/OW/PopupOWImpared_Waters_Point.xml"/> 
+			<sublayer id="34" popupconfig="popups/OW/PopupOWImpared_Waters_Line.xml"/>
+            <sublayer id="35" popupconfig="popups/OW/PopupOWImpared_Waters_Area.xml"/>
+			<sublayer id="36" popupconfig="popups/OW/PopupOWAssessed_Waters_Point.xml"/>
+            <sublayer id="37" popupconfig="popups/OW/PopupOWAssessed_Waters_Line.xml"/>
+            <sublayer id="38" popupconfig="popups/OW/PopupOWAssessed_Waters_Area.xml"/>
+			<sublayer id="39" popupconfig="popups/OW/PopupOWBeach.xml"/>
+			<sublayer id="40" popupconfig="popups/OW/PopupOWClean_Watersheds_Needs_Survey_Point.xml"/>
+			<sublayer id="41" popupconfig="popups/OW/PopupOWClean_Watersheds_Needs_Survey_Line.xml"/>
+			<sublayer id="42" popupconfig="popups/OW/PopupOWClean_Watersheds_Needs_Survey_Area.xml"/>
+			<sublayer id="43" popupconfig="popups/OW/PopupOWFish_Consumption_Advisories_Point.xml"/>
+			<sublayer id="44" popupconfig="popups/OW/PopupOWFish_Consumption_Advisories_Line.xml"/>
+			<sublayer id="45" popupconfig="popups/OW/PopupOWFish_Consumption_Advisories_Area.xml"/>
+			<sublayer id="46" popupconfig="popups/OW/PopupOWFish_Tissue_Data_Point.xml"/>
+			<sublayer id="47" popupconfig="popups/OW/PopupOWFish_Tissue_Data_Line.xml"/>
+			<sublayer id="48" popupconfig="popups/OW/PopupOWFish_Tissue_Data_Area.xml"/>
+			<sublayer id="49" popupconfig="popups/OW/PopupOWNonpoint_Source_Projects_Point.xml"/>
+			<sublayer id="50" popupconfig="popups/OW/PopupOWNonpoint_Source_Projects_Line.xml"/>
+            <sublayer id="51" popupconfig="popups/OW/PopupOWNonpoint_Source_Projects_Area.xml"/>
+			<sublayer id="52" popupconfig="popups/OW/PopupOWTotal_Max_Daily_Loads_Point.xml"/>
+			<sublayer id="53" popupconfig="popups/OW/PopupOWTotal_Max_Daily_Loads_Line.xml"/>
+			<sublayer id="54" popupconfig="popups/OW/PopupOWTotal_Max_Daily_Loads_Area.xml"/>
+			<sublayer id="55" popupconfig="popups/OW/PopupOW_NPDESpt.xml"/>
+			<sublayer id="56" popupconfig="popups/OW/PopupOW_STORETpt.xml"/>
+			
+			
+			
+			<!-- Region 1 -->
+			<sublayer id="58" popupconfig="popups/R1/PopupR1NPL_NPLPAD_Project.xml"/>
+			<sublayer id="59" popupconfig="popups/R1/PopupR1NPL_AUL_Boundaries_Project.xml"/>
+			<sublayer id="60" popupconfig="popups/R1/PopupR1NPL_Site_Boundaries_Project.xml"/>
+			<sublayer id="61" popupconfig="popups/R1/PopupR1RCRA_NPLPAD_Project.xml"/>
+			<sublayer id="62" popupconfig="popups/R1/PopupR1R1_NDAs_Project.xml"/>
+			<sublayer id="63" popupconfig="popups/R1/PopupR1RCRA_AUL_Boundaries_Project.xml"/>
+			<sublayer id="64" popupconfig="popups/R1/PopupR1RCRA_Facility_Boundaries_Pro.xml"/>
+			<sublayer id="65" popupconfig="popups/R1/PopupR1CG_line_r100_prj.xml"/>
+			<sublayer id="66" popupconfig="popups/R1/PopupR1CG_poly_r100_Project.xml"/>
+			<sublayer id="67" popupconfig="popups/R1/PopupR1ESA_points_r24_Project.xml"/> 
+			<sublayer id="68" popupconfig="popups/R1/PopupR1ESA_polys_r24_Project.xml"/>
+			<sublayer id="69" popupconfig="popups/R1/PopupR1Fuelfacil_r_EPA_Project.xml"/> 
+			<sublayer id="70" popupconfig="popups/R1/PopupR1SSAquif_2008_r24_EPA_Project.xml"/>
+			<sublayer id="71" popupconfig="popups/R1/PopupR1Tribes_r24_EPA_Project.xml"/> 
+			
+			<!-- Region  6 -->
+			<sublayer id="73" popupconfig="popups/R6/PopupR6R6_Brownfields_062612_prj.xml"/>
+			<sublayer id="74" popupconfig="popups/R6/PopupR6SSA_R6.xml"/>
+			<sublayer id="75" popupconfig="popups/R6/PopupR6NPLpt09162011.xml"/>
+			<sublayer id="76" popupconfig="popups/R6/PopupR6NPLpy09162011.xml"/>
+			<sublayer id="77" popupconfig="popups/R6/PopupR6MaintenanceEAC_July2012_prj.xml"/>
+			<sublayer id="78" popupconfig="popups/R6/PopupR6Nonattainment_July2012_prj.xml"/>		
+			
+			
+			<!-- Region  7 -->
+			<sublayer id="88" popupconfig="popups/R7/PopupR7AQUATIC_FOCUS_AREAS.xml"/>
+			<sublayer id="89" popupconfig="popups/R7/PopupR7ECO_SECTIONS.xml"/>
+			<sublayer id="90" popupconfig="popups/R7/PopupR7ECO_SECT_40HEX.xml"/>
+			<sublayer id="91" popupconfig="popups/R7/PopupR7COA_FOREST66.xml"/>
+			<sublayer id="92" popupconfig="popups/R7/PopupR7COA_FOREST33.xml"/>
+			<sublayer id="93" popupconfig="popups/R7/PopupR7COA_GRASS66.xml"/>
+			<sublayer id="94" popupconfig="popups/R7/PopupR7COA_GRASS33.xml"/>
+			<sublayer id="95" popupconfig="popups/R7/PopupR7OMERNIK_ECO3.xml"/>
+			<sublayer id="96" popupconfig="popups/R7/PopupR7COA_MOSAIC66.xml"/>
+			<sublayer id="97" popupconfig="popups/R7/PopupR7COA_MOSAIC33.xml"/>
+			<sublayer id="98" popupconfig="popups/R7/PopupR7NATL_FORESTS.xml"/>
+			<sublayer id="99" popupconfig="popups/R7/PopupR7NATL_PARKS.xml"/>
+			<sublayer id="100" popupconfig="popups/R7/PopupR7ALL_OP_AREAS.xml"/>
+			<sublayer id="101" popupconfig="popups/R7/PopupR7SIG_REGIONS.xml"/>
+			<sublayer id="102" popupconfig="popups/R7/PopupR7NAT_HERITAGE_PT.xml"/>
+			<sublayer id="103" popupconfig="popups/R7/PopupR7NAT_HERITAGE_HEX.xml"/>
+			<sublayer id="104" popupconfig="popups/R7/PopupR7ECO_FOC_GEO10.xml"/>
+			
+			<!-- Region  9-->
+			<sublayer id="106" popupconfig="popups/R9/PopupR9USCG_EPA_jurisdiction_bndry_.xml"/>
+			<sublayer id="107" popupconfig="popups/R9/PopupR9CD_112th.xml"/>
+			<sublayer id="108" popupconfig="popups/R9/PopupR9R9_tribal_bndy_2_Project.xml"/>
+			<sublayer id="108" popupconfig="popups/R9/PopupR9MX_country_bnd.xml"/>
+			<sublayer id="110" popupconfig="popups/R9/PopupR9AZ_pls_township.xml"/>
+			<sublayer id="111" popupconfig="popups/R9/PopupR9CA_pls_township_2004.xml"/>
+			<sublayer id="112" popupconfig="popups/R9/PopupR9NV_pls_township.xml"/>
+			<sublayer id="113" popupconfig="popups/R9/PopupR9AZ_pls_section.xml"/>
+			<sublayer id="114" popupconfig="popups/R9/PopupR9CA_pls_section.xml"/>
+			<sublayer id="115" popupconfig="popups/R9/PopupR9NV_pls_section.xml"/>
+			<sublayer id="116" popupconfig="popups/R9/PopupR9AZ_pls_qsection.xml"/>
+			<sublayer id="117" popupconfig="popups/R9/PopupR9NV_pls_qsection.xml"/>
+			<sublayer id="118" popupconfig="popups/R9/PopupR9R9_Tracts_2010.xml"/>
+			<sublayer id="119" popupconfig="popups/R9/PopupR9R9_BlockGroups_2010.xml"/>
+			<sublayer id="120" popupconfig="popups/R9/PopupR9R9_Blocks_2010.xml"/>
+			<sublayer id="121" popupconfig="popups/R9/PopupR9R9_avg_annual_wind_energy.xml"/>
+			<sublayer id="122" popupconfig="popups/R9/PopupR9R9_ave_annual_rainfall.xml"/>
+			<sublayer id="123" popupconfig="popups/R9/PopupR9US_solar_potential.xml"/>
+			<sublayer id="124" popupconfig="popups/R9/PopupR9CA_seismic_hazard.xml"/>
+			<sublayer id="125" popupconfig="popups/R9/PopupR9CA_spectral_acceleration_03s.xml"/>
+			<sublayer id="126" popupconfig="popups/R9/PopupR9CA_spectral_acceleration_10s.xml"/>
+			<sublayer id="127" popupconfig="popups/R9/PopupR9CA_peak_ground_acceleration.xml"/>
+			<sublayer id="128" popupconfig="popups/R9/PopupR9US_seismic_hazard.xml"/>
+			<sublayer id="129" popupconfig="popups/R9/PopupR9US_spectral_acceleration_02s.xml"/>
+			<sublayer id="130" popupconfig="popups/R9/PopupR9US_spectral_acceleration_10s.xml"/>
+			<sublayer id="131" popupconfig="popups/R9/PopupR9US_peak_ground_acceleration.xml"/>
+			<sublayer id="132" popupconfig="popups/R9/PopupR9R9_Military.xml"/>
+			<sublayer id="133" popupconfig="popups/R9/PopupR9HI_Military.xml"/>
+			<sublayer id="134" popupconfig="popups/R9/PopupR9AZ_Wetlands_areas.xml"/>
+			<sublayer id="135" popupconfig="popups/R9/PopupR9AZ_Wetlands_linear.xml"/>
+			<sublayer id="136" popupconfig="popups/R9/PopupR9CA_Wetlands_areas.xml"/>
+			<sublayer id="137" popupconfig="popups/R9/PopupR9CA_Wetlands_linear.xml"/>
+			<sublayer id="138" popupconfig="popups/R9/PopupR9HI_Wetlands_areas.xml"/>
+			<sublayer id="139" popupconfig="popups/R9/PopupR9HI_Wetlands_linear.xml"/>
+			<sublayer id="140" popupconfig="popups/R9/PopupR9NV_Wetland_areas.xml"/>
+			<sublayer id="141" popupconfig="popups/R9/PopupR9NV_Wetland_linaer.xml"/>
+			<sublayer id="142" popupconfig="popups/R9/PopupR9Wild_Scenic_Rivers.xml"/>
+			<sublayer id="143" popupconfig="popups/R9/PopupR9Tunnel_NHD.xml"/>
+			<sublayer id="144" popupconfig="popups/R9/PopupR9Dam_NHD.xml"/>
+			<sublayer id="145" popupconfig="popups/R9/PopupR9Bridge_NHD.xml"/>
+			<sublayer id="146" popupconfig="popups/R9/PopupR9Lakes_Reservoirs_NHD.xml"/>
+			<sublayer id="147" popupconfig="popups/R9/PopupR9AZ_fed_lands.xml"/>
+			<sublayer id="148" popupconfig="popups/R9/PopupR9AZ_fed_lands.xml"/>
+			<sublayer id="149" popupconfig="popups/R9/PopupR9AZ_fed_lands.xml"/>
+			<sublayer id="150" popupconfig="popups/R9/PopupR9AZ_fed_lands.xml"/>
+			<sublayer id="151" popupconfig="popups/R9/PopupR9AZ_fed_lands.xml"/>
+			<sublayer id="152" popupconfig="popups/R9/PopupR9AZ_fed_lands.xml"/>
+			<sublayer id="153" popupconfig="popups/R9/PopupR9AZ_fed_lands.xml"/>
+			<sublayer id="154" popupconfig="popups/R9/PopupR9AZ_fed_lands.xml"/>
+			<sublayer id="155" popupconfig="popups/R9/PopupR9AZ_fed_lands.xml"/>
+			<sublayer id="156" popupconfig="popups/R9/PopupR9AZ_fed_lands.xml"/>
+			<sublayer id="157" popupconfig="popups/R9/PopupR9NM_fed_lands.xml"/>
+			<sublayer id="158" popupconfig="popups/R9/PopupR9NM_fed_lands.xml"/>
+			<sublayer id="159" popupconfig="popups/R9/PopupR9NM_fed_lands.xml"/>
+			<sublayer id="160" popupconfig="popups/R9/PopupR9NM_fed_lands.xml"/>
+			<sublayer id="161" popupconfig="popups/R9/PopupR9NM_fed_lands.xml"/>
+			<sublayer id="162" popupconfig="popups/R9/PopupR9NM_fed_lands.xml"/>
+			<sublayer id="163" popupconfig="popups/R9/PopupR9NM_fed_lands.xml"/>
+			<sublayer id="164" popupconfig="popups/R9/PopupR9NM_fed_lands.xml"/>
+			<sublayer id="165" popupconfig="popups/R9/PopupR9NM_fed_lands.xml"/>
+			<sublayer id="166" popupconfig="popups/R9/PopupR9NM_fed_lands.xml"/>
+			<sublayer id="167" popupconfig="popups/R9/PopupR9NM_fed_lands.xml"/>
+			<sublayer id="168" popupconfig="popups/R9/PopupR9NM_fed_lands.xml"/>
+			<sublayer id="169" popupconfig="popups/R9/PopupR9NM_fed_lands.xml"/>
+			<sublayer id="170" popupconfig="popups/R9/PopupR9NM_fed_lands.xml"/>
+			<sublayer id="171" popupconfig="popups/R9/PopupR9UT_fed_lands.xml"/>
+			<sublayer id="172" popupconfig="popups/R9/PopupR9UT_fed_lands.xml"/>
+			<sublayer id="173" popupconfig="popups/R9/PopupR9UT_fed_lands.xml"/>
+			<sublayer id="174" popupconfig="popups/R9/PopupR9UT_fed_lands.xml"/>
+			<sublayer id="175" popupconfig="popups/R9/PopupR9UT_fed_lands.xml"/>
+			<sublayer id="176" popupconfig="popups/R9/PopupR9UT_fed_lands.xml"/>
+			<sublayer id="177" popupconfig="popups/R9/PopupR9UT_fed_lands.xml"/>
+			<sublayer id="178" popupconfig="popups/R9/PopupR9UT_fed_lands.xml"/>
+			<sublayer id="179" popupconfig="popups/R9/PopupR9UT_fed_lands.xml"/>
+			<sublayer id="180" popupconfig="popups/R9/PopupR9UT_fed_lands.xml"/>
+			<sublayer id="181" popupconfig="popups/R9/PopupR9UT_fed_lands.xml"/>
+			<sublayer id="182" popupconfig="popups/R9/PopupR9UT_fed_lands.xml"/>
+			<sublayer id="183" popupconfig="popups/R9/PopupR9NN_Geology.xml"/>
+			<sublayer id="184" popupconfig="popups/R9/PopupR9NN_Mining_Districts.xml"/>
+			<sublayer id="185" popupconfig="popups/R9/PopupR9NN_Boundary.xml"/>
+			<sublayer id="186" popupconfig="popups/R9/PopupR9NN_Chapters.xml"/>
+			<sublayer id="187" popupconfig="popups/R9/PopupR9NN_AUM_Regions.xml"/>
+			<sublayer id="188" popupconfig="popups/R9/PopupR9NN_Excess_Bi214_Polys.xml"/>
+			<sublayer id="189" popupconfig="popups/R9/PopupR9NN_Flight_Areas.xml"/>
+			<sublayer id="190" popupconfig="popups/R9/PopupR9CDC_WellSamps_all2.xml"/>
+			<sublayer id="191" popupconfig="popups/R9/PopupR9CRUMP_Samples.xml"/>
+			<sublayer id="192" popupconfig="popups/R9/PopupR9NN_USACE_Samples.xml"/>
+			<sublayer id="193" popupconfig="popups/R9/PopupR9USGS_Longsworth_Samples.xml"/>
+			<sublayer id="194" popupconfig="popups/R9/PopupR9NN_NURE_Water.xml"/>
+			<sublayer id="195" popupconfig="popups/R9/PopupR9NNEPA_Samples.xml"/>
+			<sublayer id="196" popupconfig="popups/R9/PopupR9USGS_Briet_Samples.xml"/>
+			<sublayer id="197" popupconfig="popups/R9/PopupR9Well_samples_listU2apr08.xml"/>
+			<sublayer id="198" popupconfig="popups/R9/PopupR9NN_NURE_Sediment.xml"/>
+			<sublayer id="199" popupconfig="popups/R9/PopupR9EPA_Radll_Buff10.xml"/>
+			<sublayer id="200" popupconfig="popups/R9/PopupR9CDC_U_Buff10.xml"/>
+			<sublayer id="201" popupconfig="popups/R9/PopupR9_PercentDevelopedImpervious_NLCD2006.xml"/>
+			<sublayer id="202" popupconfig="popups/R9/PopupR9LandCover2006NLCD.xml"/>
+			<sublayer id="203" popupconfig="popups/R9/R9_NPL_Points_Popup.xml"/>
+			<sublayer id="204" popupconfig="popups/R9/R9_NPL_Polys_Popup.xml"/>
+			
+			<!-- NHEERL -->
+			<sublayer id="206" popupconfig="popups/NHEERL/NHEERL_California18.xml"/>
+			<sublayer id="207" popupconfig="popups/NHEERL/NHEERL_GreatBasin16.xml"/>
+			<sublayer id="208" popupconfig="popups/NHEERL/NHEERL_GreatLakes04.xml"/>
+			<sublayer id="209" popupconfig="popups/NHEERL/NHEERL_LowerColorado15.xml"/>
+			<sublayer id="210" popupconfig="popups/NHEERL/NHEERL_LowerMississippi08.xml"/>
+			<sublayer id="211" popupconfig="popups/NHEERL/NHEERL_LowerMissouri10L.xml"/>
+			<sublayer id="212" popupconfig="popups/NHEERL/NHEERL_MidAtlantic02.xml"/>
+			<sublayer id="213" popupconfig="popups/NHEERL/NHEERL_NorthEast01.xml"/>
+			<sublayer id="214" popupconfig="popups/NHEERL/NHEERL_Ohio05.xml"/>
+			<sublayer id="215" popupconfig="popups/NHEERL/NHEERL_PacificNorthwest.xml"/>
+			<sublayer id="216" popupconfig="popups/NHEERL/NHEERL_RioGrande13.xml"/>
+			<sublayer id="217" popupconfig="popups/NHEERL/NHEERL_SourisRedRainy09.xml"/>
+			<sublayer id="218" popupconfig="popups/NHEERL/NHEERL_SouthAtlanticNorth03N.xml"/>
+			<sublayer id="219" popupconfig="popups/NHEERL/NHEERL_SouthAtlanticSouth03S.xml"/>
+			<sublayer id="220" popupconfig="popups/NHEERL/NHEERL_SouthAtlanticWest03W.xml"/>
+			<sublayer id="221" popupconfig="popups/NHEERL/NHEERL_Tennessee06.xml"/>
+			<sublayer id="222" popupconfig="popups/NHEERL/NHEERL_Texas12.xml"/>
+			<sublayer id="223" popupconfig="popups/NHEERL/NHEERL_UpperColorado14.xml"/>
+			<sublayer id="224" popupconfig="popups/NHEERL/NHEERL_UpperMississippi07.xml"/>
+			<sublayer id="225" popupconfig="popups/NHEERL/NHEERL_UpperMissouri10U.xml"/>
+			<sublayer id="226" popupconfig="popups/NHEERL/NHEERL_ArkRedWhite11.xml"/>
+			
+			</layer>      
+            
+        </operationallayers>        
+    </map>
+
+    <!-- widgets organized into widget containers that manage close/open etc -->
+    <!-- supported layout property options: horizontal(default)|float|vertical|fix-->
+    <!-- preload="open" -->
+    
+    <widgetcontainer layout="float">
+        <widgetgroup label="File" icon="assets/images/i_folder.png">
+        	
+		<widget label="Map Contents" left="84" top="80" 
+			icon="assets/images/legend32.png"				
+			config="widgets/eLayerList/eLayerListWidget.xml"
+			url="widgets/eLayerList/eLayerListWidget.swf"/>
+		      
+        <widget label="Print" right="10" top="80" 
+                	icon="assets/images/i_print.png"
+                	config="widgets/Print/PrintWidget.xml"
+                	url="widgets/Print/PrintWidget.swf"/>   
+                    
+        <widget label="EPA Clip N Ship" right="10" top="80" 
+                icon="assets/images/i_scissors.png"
+                preload="open"
+                config="widgets/FrClipAndShip/FrClipAndShipGroupWidget.xml"
+                url="widgets/FrClipAndShip/FrClipAndShipWidget.swf"/>
+                                   
+        </widgetgroup>
+        
+        <!-- Space -->
+        <widget label="" left="4" bottom="1"
+		icon="widgets/FrBlank/Clear.gif"
+		config="widgets/FrBlank/blank.xml"
+		url="widgets/FrBlank/blank.swf"/>		
+        <!-- Space -->
+        
+        <widgetgroup label="Layer Tools" icon="assets/images/i_widget.png"  >
+        	
+            <widget label="Draw and Measure" right="10" top="80" 
+                icon="assets/images/DrawMeasure2.png"
+                config="widgets/eDraw/eDrawWidget.xml"
+                url="widgets/eDraw/eDrawWidget.swf"/>
+            
+        </widgetgroup>
+	
+        <!-- Space -->		
+            <widget label="" left="4" bottom="1"
+            icon="widgets/FrBlank/Clear.gif"
+            config="widgets/FrBlank/blank.xml"
+            url="widgets/FrBlank/blank.swf"/>	
+        <!-- Space -->
+		
+        <widgetgroup label="Location Tools" icon="assets/images/i_zoomfull.png">
+            
+            <widget label="Bookmarks" right="10" top="80" 
+                    icon="assets/images/i_bookmark.png"
+                    config="widgets/Bookmark/BookmarkWidget-epa-clipship.xml"
+                    url="widgets/Bookmark/BookmarkWidget.swf"/>
+                    
+            <widget label="Find an address" right="10" top="80" 
+                    icon="assets/images/i_mailbox.png"
+                    config="widgets/Locate/LocateWidget_Bing.xml"
+                    url="widgets/Locate/LocateWidget.swf"/>     
+                    
+         </widgetgroup>
+         
+         <!-- Space -->
+        <widget label="" left="4" bottom="1"
+		icon="widgets/FrBlank/Clear.gif"
+		config="widgets/FrBlank/blank.xml"
+		url="widgets/FrBlank/blank.swf"/>		
+        <!-- Space -->
+        
+        
+        <widget label="Help"
+	    	right="10" top="80" 	    		
+	    	icon="assets/images/i_help.png"
+	        config="widgets/FrHelp/frHelp.xml"
+	        url="widgets/FrHelp/frHelp.swf"/>
+		     	
+	    
+    </widgetcontainer>
+
+</configuration>

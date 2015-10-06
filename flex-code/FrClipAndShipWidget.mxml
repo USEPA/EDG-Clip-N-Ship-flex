@@ -1,0 +1,1759 @@
+<?xml version="1.0" encoding="utf-8"?>
+<viewer:BaseWidget xmlns:fx="http://ns.adobe.com/mxml/2009"
+                   xmlns:s="library://ns.adobe.com/flex/spark"
+                   xmlns:mx="library://ns.adobe.com/flex/mx"				   
+                   xmlns:viewer="com.esri.viewer.*"
+				   xmlns:Toc="widgets.FrClipAndShip.*"
+                   xmlns:toccomp="widgets.FrClipAndShip.toc.*"
+				   xmlns:esri="http://www.esri.com/2008/ags"
+                   widgetConfigLoaded="init()"
+                   x="600"
+                   y="400">
+
+	<fx:Declarations>
+		<esri:GeometryService id="geometryService"
+							  fault="geometryService_faultHandler(event)"
+							  url="http://tasks.arcgisonline.com/ArcGIS/rest/services/Geometry/GeometryServer"/>
+	</fx:Declarations>
+	
+    <fx:Script>
+        <![CDATA[
+			import com.esri.ags.FeatureSet;
+			import com.esri.ags.Graphic;
+			import com.esri.ags.SpatialReference;
+			import com.esri.ags.events.DrawEvent;
+			import com.esri.ags.events.GeometryServiceEvent;
+			import com.esri.ags.events.GeoprocessorEvent;
+			import com.esri.ags.events.MapEvent;
+			import com.esri.ags.events.ZoomEvent;
+			import com.esri.ags.geometry.Extent;
+			import com.esri.ags.geometry.Geometry;
+			import com.esri.ags.geometry.MapPoint;
+			import com.esri.ags.geometry.Polygon;
+			import com.esri.ags.layers.ArcGISDynamicMapServiceLayer;
+			import com.esri.ags.layers.DynamicMapServiceLayer;
+			import com.esri.ags.layers.FeatureLayer;
+			import com.esri.ags.layers.GraphicsLayer;
+			import com.esri.ags.layers.Layer;
+			import com.esri.ags.layers.supportClasses.LayerDetails;
+			import com.esri.ags.layers.supportClasses.LayerInfo;
+			import com.esri.ags.symbols.Symbol;
+			import com.esri.ags.tasks.GeometryServiceSingleton;
+			import com.esri.ags.tasks.supportClasses.GPMessage;
+			import com.esri.ags.tasks.supportClasses.JobInfo;
+			import com.esri.ags.tools.DrawTool;
+			import com.esri.ags.tools.NavigationTool;
+			import com.esri.ags.utils.GeometryUtil;
+			import com.esri.ags.utils.GraphicUtil;
+			import com.esri.viewer.AppEvent;
+			import com.esri.viewer.ViewerContainer;
+			import com.esri.viewer.utils.ErrorMessageUtil;
+			import com.esri.viewer.utils.GenericJSONTask;
+			
+			import flash.events.EventDispatcher;
+			import flash.events.TextEvent;
+			
+			import mx.binding.utils.ChangeWatcher;
+			import mx.collections.ArrayCollection;
+			import mx.collections.ArrayList;
+			import mx.controls.Alert;
+			import mx.core.FlexGlobals;
+			import mx.events.CloseEvent;
+			import mx.events.CollectionEvent;
+			import mx.events.CollectionEventKind;
+			import mx.events.FlexMouseEvent;
+			import mx.events.ListEvent;
+			import mx.events.PropertyChangeEvent;
+			import mx.rpc.AsyncResponder;
+			import mx.rpc.Fault;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			
+			import spark.components.supportClasses.ItemRenderer;
+			import spark.events.IndexChangeEvent;
+			
+			import widgets.FrClipAndShip.toc.tocClasses.MyOwnEvent;
+			import widgets.FrClipAndShip.toc.tocClasses.TocItem;
+			import widgets.FrClipAndShip.toc.tocClasses.TocItemRenderer;
+			import widgets.FrClipAndShip.toc.tocClasses.TocLayerInfoItem;
+			import widgets.FrClipAndShip.toc.tocClasses.TocMapLayerItem;
+			
+			[Event(name="layervischanged", type="flash.events.Event")]
+			private static const LAYER_VIS_CHANGED:String = "layervischanged";
+			
+            private const ICON_URL:String = "widgets/FrClipAndShip/assets/images/";
+			
+			[Embed(source="widgets/FrClipAndShip/assets/images/plus.png")]
+			public var plus:Class;
+			
+			[Embed(source="widgets/FrClipAndShip/assets/images/minus.png")]
+			public var minus:Class;
+			
+			// test
+			[Bindable]
+			private var myFeatureLayer:FeatureLayer;
+			
+			[Bindable]
+			private var expanded:Boolean = false;
+			
+			[Bindable]
+			private var legendCollapsed:Boolean = false;
+			
+			[Bindable]
+			public var tocMenu:ContextMenu;
+			
+			public var lastTreeItem:ListEvent;
+			
+			private var _sellayer:Layer;
+			
+			[Bindable]
+			private var alphaVis:Boolean;
+			
+			//labels
+			[Bindable]
+			private var AlphaToolTip:String;
+			
+			[Bindable]
+			private var MetadataToolTip:String;
+			
+			[Bindable]
+			private var lTimeout:int = 60;
+			
+			[Bindable]
+			private var excludedLayers:ArrayCollection;
+			
+			private var excludeGraphicsLayers:Boolean = false;
+			
+			[Bindable]
+			private var showDesc:Boolean;
+			
+			[Bindable]
+			private var layerIsSelected:Boolean;
+			
+			[Bindable]
+			private var ZoomToExtent:String;
+			
+			[Bindable]
+			private var ZoomToMakeVisible:String;
+			
+			[Bindable]
+			private var ExpandAll:String;
+			
+			[Bindable]
+			private var CollapseAll:String;
+			
+			[Bindable]
+			private var GeneratingLegendMsg:String;
+			
+			[Embed(source="widgets/FrClipAndShip/assets/images/alpha.png")]
+			[Bindable]
+			private var alphaIcon:Class;
+			
+			
+			// New Var from clip and ship
+			private var dataUrl:String = "";
+			private var file:FileReference;
+			private var outputFileName:String;
+			private var finishDrawing:Boolean;
+			private var graphicsLayer:GraphicsLayer;
+			private var graphicContextMenu:ContextMenu;
+			private var gpService:GenericJSONTask;
+			private var selectedDrawingIcon:Image;
+			
+			private var drawSymbol:Symbol;
+			[Bindable]
+			private var exposeLayers:Boolean = false; //later set to FALSE!! fr changed to false
+			private var formatChoiceList:ArrayCollection;
+			private var rasterFormatChoiceList:ArrayCollection;
+			[Bindable]
+			private var rasterFormatChoiceListVisible:Boolean;
+			private var spatialReferenceChoiceList:ArrayCollection;
+			[Bindable]
+			private var spatialReferenceChoiceListVisible:Boolean;
+			[Bindable]
+			private var gpURL:String;
+			[Bindable]
+			private var layers:ArrayCollection;
+			[Bindable]
+			private var frlayers:ArrayCollection;
+			private var excludeLayers:Array = [];
+			[Bindable]
+			private var useCurrentExtentAsAIO:Boolean = false;
+			private var useProxy:Boolean;
+			
+			//labels
+			[Bindable]
+			private var descLabel:String;
+			[Bindable]
+			private var step1Label:String;
+			[Bindable]
+			private var polygonLabel:String;
+			[Bindable]
+			private var freehandPolygonLabel:String;
+			[Bindable]
+			private var rectangleLabel:String;
+			[Bindable]
+			private var circleLabel:String;
+			[Bindable]
+			private var ellipseLabel:String;
+			[Bindable]
+			private var clearLabel:String;
+			[Bindable]
+			private var dataCurrentExtentLabel:String;
+			[Bindable]
+			private var step2Label:String;
+			[Bindable]
+			private var step3Label:String;
+			[Bindable]
+			private var step4Label:String;
+			[Bindable]
+			private var step5Label:String;
+			[Bindable]
+			private var extractButtonLabel:String;
+			private var step1ErrorLabel:String;
+			private var step2ErrorLabel:String;
+			private var emptyResultsLabel:String;
+			private var saveDataFileLabel:String;
+			
+			// Added by fr
+			private var numberOfLayerToClip:int;
+			private var alertMessageLayerCount:int;
+			private var helpdocurl:String;
+			private var serviceLabel:String;
+			
+			public var featureUrl:String;
+			// for combo
+			[Bindable]
+			private var comboAL:ArrayList;
+			[Bindable]
+			private var fieldToBeUsedInComboPulldown:String;
+			private var queryLayer:FeatureLayer;
+			private var queryExpr:String;
+			private var queryFields:XMLList;
+			private var loadingLabel:String;
+			[Bindable]
+			private var searchResultAC:ArrayCollection;
+
+            private function init():void
+            {
+                if (configXML)
+                {
+					if (GeometryServiceSingleton.instance.url) // using GeometryServiceSingleton
+					{
+						geometryService.url = GeometryServiceSingleton.instance.url;
+						geometryService.token = GeometryServiceSingleton.instance.token;
+						geometryService.proxyURL = GeometryServiceSingleton.instance.proxyURL;
+					}
+					ZoomToExtent = configXML.labels.zoomtoextent || "Zoom To Layer Extent";
+					ZoomToMakeVisible = configXML.labels.zoomtomakevisible || "Zoom To Make Visible";
+					ExpandAll = configXML.labels.expandall || "Expand All Layers";
+					CollapseAll = configXML.labels.collapseall || "Collapse All Layers";
+					AlphaToolTip = configXML.labels.alphatooltip || "Set Map Layer Transparency";
+					MetadataToolTip = configXML.labels.metadatatooltip || "Show Details";
+					GeneratingLegendMsg = configXML.labels.generatinglegendmsg || "Generating TOC Legend";
+					lTimeout = configXML.legendtimeout || 60;
+					expanded = configXML.tocsettings.expanded && configXML.tocsettings.expanded == "true";
+					showDesc = configXML.tocsettings.showdescriptionbutton && configXML.tocsettings.showdescriptionbutton == "true";
+					legendCollapsed = configXML.tocsettings.collapselegends && configXML.tocsettings.collapselegends == "true";
+					alphaVis = configXML.tocsettings.alphasliderenabled && configXML.tocsettings.alphasliderenabled == "true";
+                    toc.map = map;
+                    toc.isMapServiceOnly = false; //gotta get this from the config file
+					toc.excludeGraphicsLayers = configXML.excludegraphiclayers &&  configXML.excludegraphiclayers == "true";
+					toc.setStyle("disclosureOpenIcon", minus);
+					toc.setStyle("disclosureClosedIcon", plus);
+					
+					excludedLayers = new ArrayCollection;
+					excludeGraphicsLayers = configXML.excludegraphiclayers && configXML.excludegraphiclayers == "true";
+					if (configData && configData.basemaps){
+						if(configXML.excludebasemaplayers && configXML.excludebasemaplayers == "true"){
+							var bname:String;
+							// exclude basemaps
+							for (var b:int = 0; b < configData.basemaps.length; b++)
+							{
+								bname = configData.basemaps[b].label;
+								var excludesb:Object =
+									{
+										name: bname,
+										ids: null
+									}
+								excludedLayers.addItem(excludesb);
+							}
+						}
+					}
+					
+					var excludeList:XMLList = configXML..excludelayer;
+					for (var i:Number = 0; i < excludeList.length(); i++)
+					{
+						var name:String = excludeList[i].@mapservice;
+						var ids:String = excludeList[i];
+						var idsArray:Array = ids.split(",");
+						if(idsArray[0] == "")
+							idsArray = null;
+						var excludes:Object =
+							{
+								name: name,
+								ids: idsArray
+							}
+						excludedLayers.addItem(excludes);
+					}
+					// Start Start Start Start
+					// start configXML from clip and ship
+					// Start Start Start Start
+					if (GeometryServiceSingleton.instance.url) // using GeometryServiceSingleton
+					{
+						geometryService.url = GeometryServiceSingleton.instance.url;
+						geometryService.token = GeometryServiceSingleton.instance.token;
+						geometryService.proxyURL = GeometryServiceSingleton.instance.proxyURL;
+					}
+					
+					// TODO: check for non-existance
+					gpURL = String(configXML.dataextractionservice);
+					if (String(configXML.aioselectionmethod) == "extent")
+					{
+						useCurrentExtentAsAIO = true;
+					}
+					else
+					{
+						useCurrentExtentAsAIO = false;
+					}
+					//useproxy
+					if (configXML.useproxy.length() > 0)
+					{
+						useProxy = configXML.useproxy == "true";
+					}
+					
+					gpService = new GenericJSONTask();
+					//trace("gpURL: "+ gpURL);
+					gpService.url = gpURL;
+					if (useProxy && configData.proxyUrl)
+					{
+						gpService.proxyURL = configData.proxyUrl;
+						gp.proxyURL = configData.proxyUrl;
+					}
+					
+					var urlVars:URLVariables = new URLVariables();
+					urlVars.f = "json";
+					
+					//Call gpService to get service properties
+					gpService.execute(urlVars, new AsyncResponder(gpService_resultHandler, gpService_faultHandler));
+					
+					// exclude these layers
+					var excludeLayersXML:XMLList = configXML.excludelayer as XMLList;
+					for (var i2:int = 0; i2 < excludeLayersXML.length(); i2++)
+					{
+						excludeLayers.push(excludeLayersXML[i2].toString());
+					}
+					
+					outputFileName = (configXML.outputfilename[0] || "extractedData") + ".zip";
+					outputFileName = outputFileName.replace(/(\\|\/|:|\?|"|<|>|\|)/g, ""); //strip illegal characters
+					
+					//labels
+					// changed fr
+					//descLabel = configXML.labels.desclabel[0] || getDefaultString("descLabel");
+					// Did day: Exract data and dowload zip file
+					descLabel = "Extract data and download zip file";
+					
+					//step1Label = configXML.labels.step1label[0] || getDefaultString("step1Label");
+					step1Label = "1. Select Area";
+					polygonLabel = configXML.labels.polygonlabel[0] || getDefaultString("drawPolygonLabel");
+					freehandPolygonLabel = configXML.labels.freehandpolygonlabel[0] || getDefaultString("drawFreehandPolygonLabel");
+					rectangleLabel = configXML.labels.rectanglelabel[0] || getDefaultString("drawRectangleLabel");
+					circleLabel = configXML.labels.circlelabel[0] || getDefaultString("drawCircleLabel");
+					ellipseLabel = configXML.labels.ellipselabel[0] || getDefaultString("drawEllipseLabel");
+					clearLabel = configXML.labels.clearlabel[0] || getDefaultString("clearLabel");
+					dataCurrentExtentLabel = configXML.labels.datacurrentextentlabel[0] || getDefaultString("dataCurrentExtentLabel");
+					//step2Label = configXML.labels.step2label[0] || getDefaultString("step2Label");
+					step2Label = ("2. Select Data");
+					//step3Label = configXML.labels.step3label[0] || getDefaultString("step3Label");
+					step3Label = ("3. Select Vector Format");
+					//step4Label = configXML.labels.step4label[0] || getDefaultString("step4Label");
+					step4Label = "4. Select Raster Format (if needed)";
+					//step5Label = configXML.labels.step5label[0] || getDefaultString("step5Label");
+					step5Label = "5. Select Spatial Reference";
+					//extractButtonLabel = configXML.labels.extractbuttonlabel[0] || getDefaultString("extractButtonLabel");
+					extractButtonLabel = "Download";
+					step1ErrorLabel = configXML.labels.step1errorlabel[0] || getDefaultString("step1ErrorLabel");
+					step2ErrorLabel = configXML.labels.step2errorlabel[0] || getDefaultString("step2ErrorLabel");
+					emptyResultsLabel = configXML.labels.emptyresultslabel[0] || getDefaultString("emptyResultsLabel");
+					saveDataFileLabel = configXML.labels.savedatafilelabel[0] || getDefaultString("saveDataFileLabel");
+					
+					// added to get alert message count
+				    alertMessageLayerCount = parseInt(configXML.alertmessagelayercount);
+					initGraphicContextMenu();
+					// End End End End End					
+					// end configXML from clip and ship
+					// End End End End End	
+					featureUrl =  configXML.urlfeature;				
+					serviceLabel =  configXML.servicelabel; // Used when query service for layers
+					var fieldForCombo:String = configXML.fieldforcombo;
+					//trace ("feature url :" + featureUrl + " field: " + fieldForCombo);
+					var queryForCombo:String = configXML.queryforcombo;
+					//trace ("Query: " + queryForCombo);
+					// grab url for help doc
+					helpdocurl =  configXML.helpdocurl; 
+                }
+				toc.excludeLayers = excludedLayers;
+				tocMenu = new ContextMenu();
+				tocMenu.addEventListener(ContextMenuEvent.MENU_SELECT, contextMenuTriggered);
+				toc.contextMenu = tocMenu;
+				scr.addEventListener(MouseEvent.MOUSE_WHEEL, bumpDelta, true);
+				
+				//trace ("toc includelayes: " + toc.includeLayers.toString());
+				
+				// Stuff from init clip and ship
+				graphicsLayer = new GraphicsLayer();
+				map.addLayer(graphicsLayer);
+				
+				AppEvent.addListener(AppEvent.DATA_PUBLISH, viewerContainer_dataPublishHandler);
+				
+				// Added to listen for change in layers from TOCItems.as				
+				FlexGlobals.topLevelApplication.addEventListener(MyOwnEvent.RECEIVED_EVENT, receiveMsgHandler);			
+				itemComboQuery(fieldForCombo,featureUrl,queryForCombo);					
+            }
+			
+			// For combobox uneque values
+			private function itemComboQuery(fieldName:String,urlFeature:String, queryValue:String):void
+			{
+				//Set outfields for query found in record 1 of xml
+				var outFields:String = fieldName + ", OBJECTID";
+				//query.outFields = [fieldName];
+				query.outFields = [outFields];
+				fieldToBeUsedInComboPulldown = fieldName;
+				//trace ("outfields: " + outFields);
+				//Set Url value for Query to that found in record 1 of xml
+				queryTask.url = urlFeature;				
+				//Set Query value to that found in record 1 of xml file
+				query.where = queryValue;				
+				
+				showMessage("Getting list of polygons for selection", true);
+				
+				queryTask.execute(query, new AsyncResponder(onResult, onFault));
+				function onResult(featureSet:FeatureSet, token:Object = null):void
+				{
+					
+					if (featureSet.features.length == 0)
+					{
+						Alert.show("No records found. Please try again.");
+						showMessage("", false);
+					}
+					else
+					{
+						// added by dasa
+						//var fs:FeatureSet = queryTask.executeLastResult;
+						//fs.features.sortOn("attributes." + fieldName);
+						//comboAL = new ArrayList(fs.attributes);						
+						showMessage("", false);
+						comboAL = new ArrayList(queryTask.executeLastResult.attributes);
+						comboAL.source.sortOn(fieldName);
+					}
+				}
+				function onFault(info:Object, token:Object = null):void
+				{
+					Alert.show(info.toString());
+					//trace ("Bad stuff happened");
+					showMessage("", false);
+				}
+			}
+			
+			// triggered when addressCB is changed
+			protected function addressCB_changeHandler(event:IndexChangeEvent):void
+			{				
+				graphicsLayer.clear();
+				// Fix so not hard coded to attribute name
+				var valueOfCombo:String = addressCB.selectedItem.STATE_NAME;				
+				var layerNameInMxd:String = "States";
+				zoomToFeature(featureUrl, "STATE_NAME", valueOfCombo);
+			}
+			
+			// triggered when addressCB is changed
+			protected function zoomToFeature(urlOfFeature:String, queryField:String, eventName:String):void
+			{					
+				graphicsLayer.clear();
+				showMessage("Zooming to selected feature", true)
+				var zoomToLayer:FeatureLayer = new FeatureLayer(urlOfFeature);
+				
+				//Set up the Query				
+				var queryForZoomToFeature:Query = new Query();			
+				var expr:String = queryField + " like '" + eventName + "'";				
+				queryForZoomToFeature.where = expr;
+				queryForZoomToFeature.outSpatialReference = map.spatialReference;
+				zoomToLayer.queryFeatures(queryForZoomToFeature, new AsyncResponder(onResult1, onFault1, queryFields));
+				
+				function onResult1(featureSet:FeatureSet, token:XMLList = null):void
+				{
+					// Try to Zoom to results
+					try
+					{
+						if ( featureSet.geometryType == "esriGeometryPoint"){
+							var myFirstGraphic:Graphic = featureSet.features[0];
+							//lastMapPoint = myFirstGraphic.geometry as MapPoint;
+							//Alert.show ("I have a map point");
+							map.centerAt(myFirstGraphic.geometry as MapPoint);
+							map.scale = 10000;
+							//map.scale = zoomScaleEventsFromConfig;
+							showMessage("", false)
+						}
+						else {
+							var graphicsExtent2:Extent = GraphicUtil.getGraphicsExtent(featureSet.features);
+							map.extent = graphicsExtent2.expand(1.1);							
+							var myGraphic:Graphic = featureSet.features[0];
+							myGraphic.symbol = new SimpleFillSymbol(SimpleFillSymbol.STYLE_SOLID, 0x3FAFDC, 0.5, new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID, 0x3FAFDC, 1, 2));
+							graphicsLayer.add(myGraphic);
+							showMessage("", false)
+						}
+					}
+					catch (error:Error)
+					{
+						//trace("From Result:" + error.message, false);	
+						showMessage("", false);
+					}
+					
+				}
+				function onFault1(info:Object, token:Object = null):void
+				{
+					//trace ("Made it to onFault");
+					showMessage("", false);
+				}
+			}
+			
+			// Fires when layer change occurs in TOC
+			public function receiveMsgHandler(event:MyOwnEvent):void{				
+				//trace("Layer Name: " + event.layerName);
+				//trace("Layer On: " + event.layerOn);
+				
+				// test to see if gp has finished and layers arraylist has been filled
+				if (exposeLayers){					
+					// Loop through layers arraylist
+					for (var i:int = 0; i < layers.length; i++)
+					{
+						//trace ("i is: " + i);
+						//trace ("Listing label: " + layers[i].label);
+						//trace ("layers[i].label.length: " + layers[i].label.length);
+
+						// Convert Map Service Name Data to a Layer so we can query it
+						//var layerToPoke:Layer = Layer( map.getLayer("Data"));						
+						var layerToPoke:Layer = Layer( map.getLayer(serviceLabel));
+						
+						if (layerToPoke is ArcGISDynamicMapServiceLayer){
+							//trace("This is a dynamic map service");
+							var arcGISDynamicMapServiceLayer:ArcGISDynamicMapServiceLayer = ArcGISDynamicMapServiceLayer(layerToPoke);
+							// get the actual visible layers
+							var actualVisibleLayers:Array = getActualVisibleLayers(arcGISDynamicMapServiceLayer.visibleLayers.toArray(), arcGISDynamicMapServiceLayer.layerInfos);
+							
+							for each (var layerInfo:LayerInfo in arcGISDynamicMapServiceLayer.layerInfos.slice())
+							{
+								//trace("layerInfo ID: " + layerInfo.id);
+								//trace("layerInfo Name: " + layerInfo.name);
+								//trace("layerInfo parentLayerId: " + layerInfo.parentLayerId);
+								
+								// Test for layers at the root or a group layer 
+								if (event.layerName == layerInfo.name && layerInfo.parentLayerId == -1){
+									// List sub layer IDs
+									//trace ("layerInfo.subLayerIds: " + layerInfo.subLayerIds);
+									// Identify layer that have or don't have sub layers
+									if(layerInfo.subLayerIds == null && layers[i].label.length == event.layerName.length && layers[i].label.indexOf(event.layerName) != -1){
+										//trace ("This is a layer at the root!!!!");
+										// Flags layer in array as being slated for download
+										layers[i].selected = event.layerOn;
+									}
+									else {
+										// This is eitehr a group layer or has satisfied the criteria might need this some day??
+										//trace ("Hold the BUS this is a group layer!!!: " + event.layerName);
+									}
+								}
+								else {
+									// This is what happens if we find a layer in a group
+									if(event.layerName == layerInfo.name){										
+										if (layers[i].label.indexOf(event.layerName) != -1 ){
+											//trace("event.layerName: " + event.layerName);
+											//trace ("layerInfo.name:" + layerInfo.name);
+											//trace("We have found the layer - Event.layerName: " + event.layerName);
+											//trace ("Listing label: " + layers[i].label);
+											//trace ("event.layerOn: " + event.layerOn);
+											// Flags layer in array as being slated for download
+											layers[i].selected = event.layerOn;
+										}										
+									}									
+								}
+							}
+						}						
+					}					
+				}				
+			}			
+
+			// From TOC/toc/tocClasses/TocMapLayerItems.as
+			private function getActualVisibleLayers(layerIds:Array, layerInfos:Array):Array
+			{
+				var result:Array = [];
+				
+				layerIds = layerIds ? layerIds.concat() : null;
+				var layerInfo:LayerInfo;
+				var layerIdIndex:int;
+				
+				if (layerIds){
+					// replace group layers with their sub layers
+					for each (layerInfo in layerInfos){
+						layerIdIndex = layerIds.indexOf(layerInfo.id);
+						if (layerInfo.subLayerIds && layerIdIndex != -1){
+							layerIds.splice(layerIdIndex, 1); // remove the group layer id
+							for each (var subLayerId:Number in layerInfo.subLayerIds){
+								layerIds.push(subLayerId); // add subLayerId
+							}
+						}
+					}
+					
+					for each (layerInfo in layerInfos.reverse()){
+						if (layerIds.indexOf(layerInfo.id) != -1 && layerIds.indexOf(layerInfo.parentLayerId) == -1 && layerInfo.parentLayerId != -1)
+							layerIds.push(layerInfo.parentLayerId);
+					}
+					result = layerIds;
+				}
+				return result;
+			}
+			
+			private function setLastTreeItem(event:ListEvent):void
+			{
+				lastTreeItem = event;
+			}
+			
+			private function setSelectedTreeItem(event:ListEvent):void
+			{
+				//trace ("setSelectedTreeItem");
+				var item:TocItem = TocItem(event.itemRenderer.data);
+				if (item is TocMapLayerItem){
+					var item2:TocMapLayerItem = item as TocMapLayerItem;
+					_sellayer = item2.layer;
+					//trace (item2.layer);
+					layerIsSelected = true;
+					// changed by fr to drop slider
+					//if(slider)
+						//slider.value = item2.layer.alpha;
+				}else{
+					layerIsSelected = false;
+					//trace("false");
+				}
+			} 
+		
+			private function cmItemTriggered(event:ContextMenuEvent):void
+			{
+				//trace ("cmItemTriggered");
+				if( lastTreeItem != null )
+				{
+					var item:TocItem = TocItem(lastTreeItem.itemRenderer.data);
+					if (item is TocLayerInfoItem){
+						var item2:TocLayerInfoItem = item as TocLayerInfoItem;
+						if ( map.scale >= item2.minScale && item2.minScale != 0) {
+							map.scale = item2.minScale - 1;
+							if(map.level){
+								if(item2.minScale <  map.lods[map.level].scale)
+									map.level++;
+							}
+						} else if (map.scale <= item2.maxScale && item2.maxScale != 0) {
+							map.scale = item2.maxScale + 1;
+							if(map.level){
+								if(item2.maxScale >  map.lods[map.level].scale)
+									map.level--;
+							}
+						}
+					}else if (item is TocMapLayerItem){
+						var item3:TocMapLayerItem = item as TocMapLayerItem;
+						if ( map.scale >= item3.minScale && item3.minScale != 0) {
+							map.scale = item3.minScale - 1;
+							if(map.level){
+								if(item3.minScale <  map.lods[map.level].scale)
+									map.level++;
+							}
+						} else if (map.scale <= item3.maxScale && item3.maxScale != 0) {
+							map.scale = item3.maxScale + 1;
+							if(map.level){
+								if(item3.maxScale >  map.lods[map.level].scale)
+									map.level--;
+							}
+						}
+					}
+				}
+			}
+			
+			private function cmItemTriggered2(event:ContextMenuEvent):void
+			{
+				//trace ("cmItemTriggered2");
+				if( lastTreeItem != null )
+				{
+					var item:TocItem = TocItem(lastTreeItem.itemRenderer.data);
+					if (item is TocLayerInfoItem){
+						var item2:TocLayerInfoItem = item as TocLayerInfoItem;
+						if(item2.layerExtent.spatialReference != map.spatialReference){
+							geometryService.project([item2.layerExtent],map.spatialReference, 
+								new AsyncResponder( onResult, null));
+								function onResult(result:Object, token:Object):void{
+									map.extent = result[0];
+									if (!map.extent.contains(result[0]))
+									{
+										map.level--;
+									}
+								};
+						}else{
+							map.extent = item2.layerExtent;
+						}
+					}else if (item is TocMapLayerItem){
+						var item3:TocMapLayerItem = item as TocMapLayerItem;
+						if(item3.layerExtent.spatialReference != map.spatialReference){
+							geometryService.project([item3.layerExtent],map.spatialReference, 
+								new AsyncResponder( onResult2, null));
+							function onResult2(result:Object, token:Object):void{
+								map.extent = result[0];
+								if (!map.extent.contains(result[0]))
+								{
+									map.level--;
+								}
+							};
+						}else{
+							map.extent = item3.layerExtent;
+						}
+					}
+				}
+			}
+			
+			private function cmItemTriggered3(event:ContextMenuEvent):void
+			{
+				//trace ("cmItemTriggered3");
+				const _tocRoots:ArrayCollection = toc.dataProvider as ArrayCollection;
+				for (var i:int = 0; i < _tocRoots.length; i++)
+				{
+					const item:TocItem = _tocRoots[i];
+					expandAll(item, event);
+					_tocRoots.refresh();
+				}
+			}
+			
+			private function expandAll(item:TocItem, event:ContextMenuEvent):void
+			{
+				item.collapsed = false;
+				toc.expandItem(item, true, true, true, event);
+				if(item.isGroupLayer()){
+					for each (var item2:TocItem in item.children){
+						expandAll(item2, event);
+					}
+				}
+			}
+			
+			private function cmItemTriggered4(event:ContextMenuEvent):void
+			{
+				//trace ("cmItemTriggered4");
+				const _tocRoots:ArrayCollection = toc.dataProvider as ArrayCollection;
+				for (var i:int = 0; i < _tocRoots.length; i++)
+				{
+					const item:TocItem = _tocRoots[i];
+					collapseAll(item, event);
+					_tocRoots.refresh();
+				}
+			}
+			
+			private function collapseAll(item:TocItem, event:ContextMenuEvent):void
+			{
+				item.collapsed = true;
+				toc.expandItem(item, false, true, true, event);
+				if(item.isGroupLayer()){
+					for each (var item2:TocItem in item.children){
+						collapseAll(item2, event);
+					}
+				}
+			}
+			
+			private function geometryService_faultHandler(event:FaultEvent):void
+			{
+				Alert.show(event.fault.toString(), wTemplate.widgetTitle);
+			}
+			
+			public function contextMenuTriggered(event:ContextMenuEvent):void
+			{
+				//trace("contextMenuTriggered");
+				tocMenu.hideBuiltInItems();
+				tocMenu.customItems = new Array();
+							
+				if( lastTreeItem != null)
+				{
+					var item:TocItem = TocItem(lastTreeItem.itemRenderer.data);
+					
+					var addMenuItem3:ContextMenuItem = new ContextMenuItem(ExpandAll,true);
+					addMenuItem3.addEventListener(ContextMenuEvent.MENU_ITEM_SELECT, cmItemTriggered3);
+					var addMenuItem4:ContextMenuItem = new ContextMenuItem(CollapseAll);
+					addMenuItem4.addEventListener(ContextMenuEvent.MENU_ITEM_SELECT, cmItemTriggered4);
+					
+					if(!isFeatureLayerChild(item)){
+						if( item.scaledependant){
+							//trace ("isFeatureLayerChild");
+							var addMenuItem:ContextMenuItem = new ContextMenuItem(ZoomToMakeVisible);
+							addMenuItem.addEventListener(ContextMenuEvent.MENU_ITEM_SELECT, cmItemTriggered);
+							tocMenu.customItems.push(addMenuItem);
+						}
+						if (item is TocLayerInfoItem || (item is TocMapLayerItem && TocMapLayerItem(item).layer is FeatureLayer)){
+							//trace ("TocLayerInfoItem");
+							var addMenuItem2:ContextMenuItem = new ContextMenuItem(ZoomToExtent);
+							addMenuItem2.addEventListener(ContextMenuEvent.MENU_ITEM_SELECT, cmItemTriggered2);
+							tocMenu.customItems.push(addMenuItem2);
+							tocMenu.customItems.push(addMenuItem3);
+							tocMenu.customItems.push(addMenuItem4);
+						}
+						if(item is TocMapLayerItem)
+						{
+							//trace ("TocMapLayerItem");
+							tocMenu.customItems.push(addMenuItem3);
+							tocMenu.customItems.push(addMenuItem4);
+						}
+					}
+				}
+			}
+			
+			/**
+			 * Whether the specified TOC item is a child of a Feature Layer map service layer.
+			 */
+			private function isFeatureLayerChild(item:TocItem):Boolean
+			{
+				while (item)
+				{
+					item = item.parent;
+					if (item is TocMapLayerItem)
+					{
+						if (TocMapLayerItem(item).layer is FeatureLayer)
+						{
+							return true;
+						}
+					}
+				}
+				return false;
+			}
+
+			private function getExcludeLayers():ArrayCollection
+			{
+				var result:ArrayCollection = new ArrayCollection();
+				
+				if (configData && configData.basemaps)
+				{
+					if(configXML.excludebasemaplayers &&  configXML.excludebasemaplayers == "true")
+					{
+						// exclude basemaps
+						for (var i:int = 0; i < configData.basemaps.length; i++)
+						{
+							result.addItem(configData.basemaps[i].label);
+						}
+					}
+				}
+				
+				if (configXML)
+				{
+					// exclude these layers
+					var layers:XMLList = configXML..excludelayer as XMLList;
+					for (var j:Number = 0; j < layers.length(); j++)
+					{
+						result.addItem(layers[j].toString());
+					}
+				}
+				
+				return result;
+			}
+			
+			private function sldrDataTipFormatter(value:Number):String 
+			{ 
+				return _sellayer.name + ": " + int(value * 100) + "%"; 
+			}
+			
+			protected function bumpDelta(event:MouseEvent):void
+			{
+				event.delta *= 0.5;
+			}
+			
+			// +++++++++++++++++++++++++++++++++++++++++++
+			//  New stuff from Clip and Ship Starts Here
+			// +++++++++++++++++++++++++++++++++++++++++++
+			
+			private function initGraphicContextMenu():void
+			{
+				graphicContextMenu = new ContextMenu();
+				graphicContextMenu.hideBuiltInItems();
+				var menuItem:ContextMenuItem = new ContextMenuItem(clearLabel);
+				menuItem.addEventListener(ContextMenuEvent.MENU_ITEM_SELECT, menuItem_contextMenuDeleteHandler);
+				graphicContextMenu.customItems.push(menuItem);
+			}
+			
+			protected function menuItem_contextMenuDeleteHandler(event:ContextMenuEvent):void
+			{
+				var graphic:Graphic = event.contextMenuOwner as Graphic;
+				var graphicsLayer:GraphicsLayer = graphic.graphicsLayer;
+				graphicsLayer.remove(graphic);
+			}
+			
+			private function makeHTMLSafe(content:String):String
+			{
+				content = content.replace(/>/g, "&gt;");
+				content = content.replace(/</g, "&lt;");
+				return content;
+			}
+			
+			//
+			// GP Service functions
+			//
+			private function callGPService():void
+			{
+				if (graphicsLayer.numGraphics > 0)
+				{
+					var graphics:Array = (graphicsLayer.graphicProvider as ArrayCollection).toArray();
+					var geometries:Array = GraphicUtil.getGeometries(graphics);
+					
+					if (needToSimplifyPolygons(geometries))
+					{
+						geometryService.simplify(geometries);
+					}
+					else
+					{
+						createGPParamsAndExtract(geometries);
+					}
+				}
+				else
+				{
+					Alert.show(step1ErrorLabel, wTemplate.widgetTitle);
+				}
+			}
+			
+			private function createGPParamsAndExtract(geometries:Array):void
+			{
+				//trace ("Running createGPParamsAndExtract");
+				var clipFS:FeatureSet = createClipFeatureSet(geometries);
+				
+				if (clipFS)
+				{
+					//trace ("on if of clipFS");
+					var params:Object;
+					numberOfLayerToClip = 0; // set to 0 number of layer to clip
+					params = createGPParams(clipFS);
+					
+					if (params)
+					{
+						setMapNavigation(null, null);
+						
+						swfMessage2.visible = true;
+						// Changed by Frank
+						//gp.processSpatialReference = map.spatialReference;
+						//gp.processSpatialReference = new SpatialReference(spatialReferenceDDL.selectedItem.data);
+						// Out Spatial Refrence
+						//trace (spatialReferenceDDL.selectedItem.data);					
+						//gp.outSpatialReference = map.spatialReference;
+						//var newspatialReference:SpatialReference = new SpatialReference(6703)
+						gp.outSpatialReference = new SpatialReference(spatialReferenceDDL.selectedItem.data);
+						
+						if (numberOfLayerToClip > alertMessageLayerCount){
+							//var layerAlert:Alert;
+							/* Alert.show( "Are you sure you want to clip " + numberOfLayerToClip +" layers?  Clipping this many layers may take a very long time.",
+								"Confirm Clipping", 
+								Alert.YES| Alert.NO,
+								this,
+								alertListener,
+								null,
+								Alert.NO); */
+							Alert.show( "You have selected  " + numberOfLayerToClip + " layers for download, which exceeds the maximum download limit of  " + alertMessageLayerCount + ". Please select a smaller number of layers and try again.",
+								"Clipping Limit Exceeded", 
+								Alert.OK,
+								this,
+								alertListener,
+								null,
+								Alert.NO);
+						}
+						else {
+							// this this if less then the alertMessageLayerCount layers
+							//trace ("Submitting Job in else");
+							//trace("Params: " + params.toString());
+							gp.submitJob(params);
+						}						
+						
+						function alertListener(eventObj:CloseEvent):void {
+						// Check to see if the OK button was pressed.
+							if (eventObj.detail==Alert.YES) {
+								//trace ("you are going to clip"); 
+								//trace("Params: " + params);
+								gp.submitJob(params);
+							}
+							else{
+								// They pressed No
+								// No layer will be clipped
+								Alert.show ("No layers will be clipped");
+								swfMessage2.visible = false;
+							}
+						} // end of alertListener
+					}
+				}
+			}
+			
+			private function needToSimplifyPolygons(geometries:Array):Boolean
+			{
+				var hasSelfIntersectingPolygons:Boolean = false;
+				
+				for each (var geometry:Geometry in geometries)
+				{
+					if (geometry.type == Geometry.POLYGON)
+					{
+						if (GeometryUtil.polygonSelfIntersecting(geometry as Polygon))
+						{
+							hasSelfIntersectingPolygons = true;
+							break;
+						}
+					}
+				}
+				
+				return hasSelfIntersectingPolygons;
+			}
+			
+			private function createGPParams(clipFS:FeatureSet):Object
+			{
+				//trace ("createGPParams");
+				var gpParams:Object;
+				
+				if (exposeLayers)
+				{
+					//trace ("if exposeLayers");
+					var layersToClip:Array = [];
+					//trace ("layers.length: " + layers.length);
+										
+					for (var i:int = 0; i < layers.length; i++)
+					{
+						//trace ("list of layer and status: " + layers.getItemAt(i).selected );
+						if (layers.getItemAt(i).selected == "true")
+						{
+							// CLIP CLIP
+							// CLIPPING HERE
+							// CLIP CLIP
+							// Need to go deeper at layers.getItemAt(i).label <- just get group layer
+							//trace ("Add to list of layers to Clip: " + layers.getItemAt(i).label + " Visible: "+ layers.getItemAt(i).selected)
+							layersToClip.push(layers.getItemAt(i).label);							
+						}
+						//trace ("You are clipping: " + count.toString());
+					}
+					//trace ("layersToClip.length = " + layersToClip.length);
+					
+					if (layersToClip.length > 0)
+					{
+						gpParams =
+							{
+								"Area_of_Interest": clipFS,
+								"Feature_Format": formatDDL.selectedItem.data,
+								"Layers_to_Clip": layersToClip
+								
+							};
+						//trace ("Area_of_Interest: " + clipFS);
+						//trace ("Feature_Format: " + formatDDL.selectedItem.data);
+						//trace ("Layers_to_Clip: " + layersToClip.toString());
+						//trace ("Area_of_Interest: " + clipFS.toString());
+						//trace ("Feature_Format: "+ formatDDL.selectedItem.data);
+						
+						
+						numberOfLayerToClip = layersToClip.length - 0;
+						//trace ("This many to be clipped: " + numberOfLayerToClip);
+						
+						// add if necessary
+						if (rasterFormatDDL.visible)
+						{
+							gpParams["Raster_Format"] = rasterFormatDDL.selectedItem.data;
+						}
+						if (spatialReferenceDDL.visible)
+						{
+							gpParams["Spatial_Reference"] = spatialReferenceDDL.selectedItem.data;
+							//trace ("Spatial_Reference: " + spatialReferenceDDL.selectedItem.data);
+							//trace ("Yes spatialReferenceDDL.visible");
+						}
+					}
+					else
+					{
+						Alert.show(step2ErrorLabel, wTemplate.widgetTitle);
+						//Alert.show("Got no layers", wTemplate.widgetTitle);
+					}
+				}
+				else
+				{
+					//trace ("Else of ExposeLayers");
+					gpParams =
+						{
+							"Area_of_Interest": clipFS,
+							"Feature_Format": formatDDL.selectedItem.data
+						};
+					
+					// add if necessary
+					if (rasterFormatChoiceListVisible)
+					{
+						gpParams["Raster_Format"] = rasterFormatDDL.selectedItem.data;
+					}
+					if (spatialReferenceChoiceListVisible)
+					{
+						gpParams["Spatial_Reference"] = spatialReferenceDDL.selectedItem.data;
+					}
+				}
+				
+				return gpParams;
+			}
+			
+			private function createClipFeatureSet(geometries:Array):FeatureSet
+			{
+				//trace ("running createClipFeatureSet");
+				var clipFS:FeatureSet;
+				
+				if (useCurrentExtentAsAIO)
+				{
+					//trace ("on useCurrentExtentAsAIO");
+					//create the extent as a polygon
+					var envelope:Polygon = new Polygon(null, map.spatialReference);
+					envelope.rings =
+						[[
+							new MapPoint(map.extent.xmin, map.extent.ymin),
+							new MapPoint(map.extent.xmax, map.extent.ymin),
+							new MapPoint(map.extent.xmax, map.extent.ymax),
+							new MapPoint(map.extent.xmin, map.extent.ymax),
+							new MapPoint(map.extent.xmin, map.extent.ymin)
+						]];
+					
+					clipFS = new FeatureSet();
+					clipFS.spatialReference = map.spatialReference;
+					clipFS.features = [{ geometry: envelope }];
+					//trace ("Went with extent");
+				}
+				else
+				{
+					//trace ("on else");
+					var features:Array = [];
+					
+					for each (var geometry:Geometry in geometries)
+					{
+						//trace ("for each");
+						features.push({ geometry: geometry });
+					}
+					
+					clipFS = new FeatureSet();				
+					clipFS.spatialReference = map.spatialReference;
+					clipFS.features = features;
+					//trace ("Went with Array");
+				}
+				
+				return clipFS;
+			}
+			
+			//
+			// Draw functions
+			//
+			private function activateDrawTool(event:MouseEvent):void
+			{
+				addSharedData("Deactivate_DrawTool", null); // to be able to deactivate drawTool on other widgets
+				
+				// apply glow
+				selectedDrawingIcon = Image(event.currentTarget);
+				clearSelectionFilter();
+				// fr
+				graphicsLayer.clear();
+				selectedDrawingIcon.filters = [ glowFilter ];
+				
+				finishDrawing = false;
+				
+				dataUrl = "";
+				var status:String;
+				var value:String = selectedDrawingIcon.name;
+				switch (value)
+				{
+					case DrawTool.POLYGON:
+					{
+						status = polygonLabel;
+						break;
+					}
+					case DrawTool.FREEHAND_POLYGON:
+					{
+						status = freehandPolygonLabel;
+						break;
+					}
+					case DrawTool.EXTENT:
+					{
+						status = rectangleLabel;
+						break;
+					}
+					case DrawTool.CIRCLE:
+					{
+						status = circleLabel;
+						break;
+					}
+					case DrawTool.ELLIPSE:
+					{
+						status = ellipseLabel;
+						break;
+					}
+				}
+				drawSymbol = new SimpleFillSymbol(SimpleFillSymbol.STYLE_SOLID, 0x3FAFDC, 0.5, new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID, 0x3FAFDC, 1, 2));
+				setMapAction(value, status, drawSymbol, map_drawEndHandler);
+			}
+			
+			private function clearSelectionFilter():void
+			{
+				// Fr Changed aioBox to aioBox2
+				for (var i:int = 0; i < aioBox2.numChildren; i++)
+				{
+					if (aioBox2.getChildAt(i).filters && aioBox2.getChildAt(i).filters.length > 0)
+					{
+						if (!(selectedDrawingIcon && aioBox2.getChildAt(i) === selectedDrawingIcon))
+						{
+							aioBox2.getChildAt(i).filters = [];
+						}
+					}
+				}
+			}
+			
+			private function onTurnOnNav():void
+			{
+				setMapNavigation(NavigationTool.PAN, "Pan Map");
+			}
+			
+			private function clear():void
+			{
+				onTurnOnNav();
+				graphicsLayer.clear();
+			}
+			
+			private function viewerContainer_dataPublishHandler(event:AppEvent):void
+			{
+				var data:Object = event.data;
+				
+				if (data.key == "Deactivate_DrawTool")
+				{
+					setMapAction(null, null, null, null);
+					if (selectedDrawingIcon)
+					{
+						selectedDrawingIcon.filters = [];
+						selectedDrawingIcon = null;
+					}
+				}
+			}
+			
+			private function wTemplate_closedHandler(event:Event):void
+			{
+				graphicsLayer.visible = false;
+				
+				setMapAction(null, null, null, null); // deactivate drawTool
+				if (selectedDrawingIcon)
+				{
+					selectedDrawingIcon.filters = [];
+					selectedDrawingIcon = null;
+				}
+			}
+			
+			private function wTemplate_openHandler(event:Event):void
+			{
+				if (graphicsLayer)
+				{
+					graphicsLayer.visible = true;
+				}
+			}
+			
+			private function wTemplate_minimizedHandler(event:Event):void
+			{
+				graphicsLayer.visible = false;
+			}
+			
+			private function icon_rollOverHandler(event:MouseEvent):void
+			{
+				//trace ("roll in occured");
+				clearSelectionFilter();
+				event.target.filters = [ glowFilter ];
+			}
+			
+			private function icon_rollOutHandler(event:MouseEvent):void
+			{
+				//trace ("roll out occured");
+				clearSelectionFilter();
+			}
+			
+			private function map_drawEndHandler(event:DrawEvent):void
+			{
+				// deactivate the draw tool
+				finishDrawing = true;
+				
+				selectedDrawingIcon = null;
+				clearSelectionFilter();
+				
+				onTurnOnNav();
+				
+				var graphic:Graphic = event.graphic;
+				graphic.contextMenu = graphicContextMenu;
+				
+				if (graphic.geometry is Extent)
+				{
+					// convert extent to a polygon
+					const extent:Extent = Extent(graphic.geometry);
+					var extentPolygon:Polygon = new Polygon(null, map.spatialReference);
+					extentPolygon.rings = [[
+						new MapPoint(extent.xmin, extent.ymin),
+						new MapPoint(extent.xmax, extent.ymin),
+						new MapPoint(extent.xmax, extent.ymax),
+						new MapPoint(extent.xmin, extent.ymax),
+						new MapPoint(extent.xmin, extent.ymin)
+					]];
+					graphic.geometry = extentPolygon;
+				}
+				graphic.symbol = drawSymbol;
+				
+				// add graphic to the graphics layer
+				graphicsLayer.add(graphic);
+			}
+			
+			private function gp_jobCompleteHandler(event:GeoprocessorEvent):void
+			{
+				//trace("gp_jobCompleteHandler");
+				swfMessage2.visible = false;
+				if (event.jobInfo.jobStatus == JobInfo.STATUS_SUCCEEDED)
+				{
+					gp.getResultData(gp.submitJobLastResult.jobId,
+						"Output_Zip_File"); // parameterName
+				}
+				else
+				{
+					var msg:String = getDefaultString("problemLabel") + "\n\n\n" + event.jobInfo.jobStatus;
+					//trace("something bad happend");
+					if (event.jobInfo.messages)
+					{
+						//trace("Got an error");
+						msg += "\n\n\n" + GPMessage(event.jobInfo.messages[event.jobInfo.messages.length - 1]).description;
+					}
+					showError(msg);
+				}
+			}
+			
+			private function gp_getResultDataCompleteHandler(event:GeoprocessorEvent):void
+			{
+				//trace("gp_getResultDataCompleteHandler");
+				if (event.parameterValue)
+				{					
+					
+					dataUrl = String(event.parameterValue.value.url);
+					//Alert.show("URL passed from AGS: "+ dataUrl);
+					if (!dataUrl)
+					{
+						Alert.show(emptyResultsLabel, wTemplate.widgetTitle);
+						return;
+					}
+					
+					Alert.show(saveDataFileLabel, wTemplate.widgetTitle, Alert.YES | Alert.NO, null, alert_ClickHandler);
+				}
+				else
+				{
+					Alert.show(emptyResultsLabel, wTemplate.widgetTitle);
+				}
+			}
+			
+			// Event handler function for displaying the selected Alert button.
+			private function alert_ClickHandler(event:CloseEvent):void
+			{
+				if (event.detail == Alert.YES)
+				{
+					downloadFile(dataUrl);
+				}
+			}
+			
+			private function downloadFile(url:String):void
+			{
+				var downloadURL:URLRequest = new URLRequest();
+				downloadURL.url = url;
+				file = new FileReference();
+				// TODO: can we be smarter with the name of the zip file? For example, for single layers, using a modified layer name?
+				file.download(downloadURL, outputFileName);
+			}
+			
+			private function gp_faultHandler(event:FaultEvent):void
+			{
+				swfMessage.visible = false;
+				var msg:String = getDefaultString("problemLabel") + "\n\n\n" + event.fault.faultString;
+				showError(msg);
+			}
+			
+			// run on initial start up of widget to get list of layers available to clip and other settings
+			private function gpService_resultHandler(serviceProperties:Object, token:Object = null):void
+			{
+				var params:Array = serviceProperties.parameters;
+				rasterFormatChoiceListVisible = false;
+				// Changed by Fr
+				//spatialReferenceChoiceListVisible = false;
+				spatialReferenceChoiceListVisible = true;
+				for (var i:int = 0; i < params.length; i++)
+				{
+					if (params[i].name == "Layers_to_Clip")
+					{
+						// creates list of layers for array collection used in GUI
+						layers = new ArrayCollection();
+						exposeLayers = true;
+						for each (var layer:Object in params[i].choiceList)
+						{
+							if (excludeLayers.indexOf(layer) == -1)
+							{
+								var obj:Object = { label: layer, selected: false };
+								// Provides a list of layers available from mxd via gp
+								//trace ("Layer: " + layer);
+								layers.addItem(obj);
+							}
+						}
+					}
+					if (params[i].name == "Feature_Format")
+					{
+						formatChoiceList = new ArrayCollection();
+						for each (var format:String in params[i].choiceList)
+						{
+							const fileLabel:String = format.substring(0, format.indexOf("-") - 1);
+							const fileExtension:String = format.substring(format.lastIndexOf("."), format.length);
+							formatChoiceList.addItem({ data: format, label: fileLabel + " (" + fileExtension + ")" });
+						}
+					}
+					
+					if (params[i].name == "Raster_Format")
+					{
+						rasterFormatChoiceListVisible = true;
+						rasterFormatChoiceList = new ArrayCollection();
+						for each (var rasterFormat:String in params[i].choiceList)
+						{
+							const fileLabel1:String = rasterFormat.substring(0, rasterFormat.indexOf("-") - 1);
+							const fileExtension1:String = rasterFormat.substring(rasterFormat.lastIndexOf("."), rasterFormat.length);
+							rasterFormatChoiceList.addItem({ data: rasterFormat, label: fileLabel1 + " (" + fileExtension1 + ")" });
+						}
+					}
+					if (params[i].name == "Spatial_Reference")
+					{
+						spatialReferenceChoiceListVisible = true;
+						spatialReferenceChoiceList = new ArrayCollection();
+						// removed by fr since will populate manualy
+						for each (var spatialReferenceString:String in params[i].choiceList)
+						{
+							spatialReferenceChoiceList.addItem({ data: spatialReferenceString, label: spatialReferenceString });
+						}
+						// Maybe not needed if can get from gp
+						//spatialReferenceChoiceList.addItem({ data: "102100", label: "Web Mercator" });
+						//spatialReferenceChoiceList.addItem({ data: "6703", label: "Albers_Equal_Area" });
+					}
+					/* spatialReferenceChoiceListVisible = true;
+					spatialReferenceChoiceList = new ArrayCollection();
+					spatialReferenceChoiceList.addItem({ data: "102100", label: "Web Mercator" });
+					spatialReferenceChoiceList.addItem({ data: "6703", label: "Albers_Equal_Area" }); */
+				}
+				// loads layers into checkboxDG
+				// removed when fr nuked old layer on and off for selecting clip layers
+				//checkBoxDG.dataProvider = layers;
+				
+				// Added  by FR
+				formatDDL.dataProvider = formatChoiceList;
+				rasterFormatDDL.dataProvider = rasterFormatChoiceList;
+				spatialReferenceDDL.dataProvider = spatialReferenceChoiceList;
+			}
+			
+			private function gpService_faultHandler(fault:Fault, token:Object = null):void
+			{
+				var msg:String = "Unable to connect to GP Service:\n"
+					+ gp.url + "\n\n"
+					+ "Most likely cause:\n"
+					+ ErrorMessageUtil.getKnownErrorCauseMessage(fault.faultCode) + "\n\n"
+					+ "Details:\n"
+					+ makeHTMLSafe(fault.toString());
+				showError(msg);
+				widgetVBox.enabled = false;
+			}
+			
+			private function geometryService_faultHandler2(event:FaultEvent):void
+			{
+				Alert.show(event.fault.toString(), wTemplate.widgetTitle);
+			}
+			
+			private function geometryService_simplifyHandler(event:GeometryServiceEvent):void
+			{
+				createGPParamsAndExtract(event.result as Array);
+			}
+			
+			private function showMessage(msg:String, swfVisible:Boolean):void
+			{
+				txtMessage2.text = msg;
+				swfMessage2.visible = swfVisible;
+				//txtVisible = true;
+				//reportButton.enabled = true;
+			}
+			
+			protected function formatDDL_changeHandler(event:IndexChangeEvent):void
+			{
+				//trace ("you modified the vector format puldown: " + formatDDL.selectedIndex);
+				//formatDDL.selectedIndex
+				if (formatDDL.selectedIndex == 3){
+					//trace ("you picked kml")
+					spatialReferenceDDL.selectedIndex = 2
+				}
+			}
+			
+			protected function helpButton_clickHandler(event:MouseEvent):void
+			{
+				navigateToURL(new URLRequest(helpdocurl));
+			}
+			
+		]]>
+    </fx:Script>
+	<!--Declaration from extract widget-->
+	<fx:Declarations>
+		<esri:SimpleFillSymbol id="sfs"
+							   alpha="0.8"
+							   color="#FFFFFF">
+			<esri:SimpleLineSymbol width="2"
+								   color="#00FF00"
+								   style="solid"/>
+		</esri:SimpleFillSymbol>
+		
+		<esri:GeometryService id="geometryService2"
+							  fault="geometryService_faultHandler(event)"
+							  simplifyComplete="geometryService_simplifyHandler(event)"
+							  url="http://tasks.arcgisonline.com/ArcGIS/rest/services/Geometry/GeometryServer"/>
+		<!-- GP -->
+		<esri:Geoprocessor id="gp"
+						   concurrency="last"
+						   fault="gp_faultHandler(event)"
+						   getResultDataComplete="gp_getResultDataCompleteHandler(event)"
+						   jobComplete="gp_jobCompleteHandler(event)"
+						   url="{gpURL}"/>
+		<!-- Effects and Filters-->
+		<s:GlowFilter id="glowFilter"
+					  alpha="1"
+					  color="{getStyle('focusColor')}"
+					  inner="true"
+					  strength="2"/>
+		<!-- <esri:ArcGISDynamicMapServiceLayer id="dynamicLayer"
+										   url="http://www.fishcda.com/ArcGIS/rest/services/gdg/MapServer" /> -->
+		<!-- Query for combo box-->
+		<esri:QueryTask id="queryTask" useAMF="true" showBusyCursor="true"/>		
+		<esri:Query id="query" returnGeometry="false"/>	
+	</fx:Declarations>
+	<fx:Style>	
+		.HeaderTextStyle{
+			font-weight: normal;
+			font-color: blue;
+			fontSize: 14;
+		}
+	</fx:Style>
+    <viewer:WidgetTemplate id="wTemplate"
+                           height="560"
+                           skinClass="com.esri.viewer.skins.WidgetTemplateSkin"
+                           width="414">		
+		<!--NEW STUF from Clip and Ship-->		
+		<s:Scroller width="100%" height="100%"
+					horizontalScrollPolicy="off">
+			<s:VGroup id="widgetVBox"
+					  width="100%" height="100%"
+					  gap="2"
+					  verticalAlign="middle">
+				<!-- <s:Label width="100%" text="{descLabel}"/> -->
+				<mx:Spacer/>
+				<s:HGroup id="aioBox"
+						  width="100%" height="80"
+						  gap="0"
+						  horizontalAlign="left"
+						  includeInLayout="{!useCurrentExtentAsAIO}"
+						  visible="{!useCurrentExtentAsAIO}">
+					<s:VGroup height="100%">
+						<s:HGroup>
+							<s:Label text="{step1Label}" styleName="HeaderTextStyle" />
+							<!--<s:Label text="" paddingLeft="230" />-->
+							
+						</s:HGroup>
+																		
+						<s:HGroup verticalAlign="middle">
+							<s:Label width="100%" paddingLeft="22" text="Choose a state"/>
+							<s:ComboBox id="addressCB" 
+										dataProvider="{comboAL}"
+										labelField="{fieldToBeUsedInComboPulldown}"									
+										change="addressCB_changeHandler(event)"										
+										width="150"
+										/>							
+							<s:Label click="clear()"
+										 text="{clearLabel}"
+										 toolTip="Clear map selection graphics"
+										 textDecoration="underline"
+										 useHandCursor="true"
+										 buttonMode="true"
+										 mouseChildren="false"/>
+							<s:Label text="" paddingLeft="27" />
+							<mx:LinkButton id="helpButton" icon="@Embed(source='assets/images/i_help20_20.png')" 
+										   click="helpButton_clickHandler(event)"  
+										   toolTip="Clip and Ship Help"
+										   width="20" height="20"/>							
+						</s:HGroup>
+						<s:HGroup verticalAlign="middle" id="aioBox2">
+							<s:Label width="100%" paddingLeft="22"  text="OR Use the draw tool"/>
+							
+							<mx:Image name="{DrawTool.EXTENT}"
+									  width="40" height="40"
+									  buttonMode="true"
+									  click="activateDrawTool(event)"
+									  rollOut="icon_rollOutHandler(event)"
+									  rollOver="icon_rollOverHandler(event)"
+									  source="assets/images/i_draw_rect.png"
+									  toolTip="{rectangleLabel}"
+									  useHandCursor="true"/>
+							<mx:Image name="{DrawTool.CIRCLE}"
+									  width="40" height="40"
+									  buttonMode="true"
+									  click="activateDrawTool(event)"
+									  rollOut="icon_rollOutHandler(event)"
+									  rollOver="icon_rollOverHandler(event)"
+									  source="assets/images/i_draw_circle.png"
+									  toolTip="{circleLabel}"
+									  useHandCursor="true"/>
+							<mx:Image name="{DrawTool.ELLIPSE}"
+									  width="40" height="40"
+									  buttonMode="true"
+									  click="activateDrawTool(event)"
+									  rollOut="icon_rollOutHandler(event)"
+									  rollOver="icon_rollOverHandler(event)"
+									  source="assets/images/i_draw_ellipse.png"
+									  toolTip="{ellipseLabel}"
+									  useHandCursor="true"/>
+							<mx:Image name="{DrawTool.POLYGON}"
+									  width="40" height="40"
+									  buttonMode="true"
+									  click="activateDrawTool(event)"
+									  rollOut="icon_rollOutHandler(event)"
+									  rollOver="icon_rollOverHandler(event)"
+									  source="assets/images/i_draw_poly.png"
+									  toolTip="{polygonLabel}"
+									  useHandCursor="true"/>
+							<mx:Image name="{DrawTool.FREEHAND_POLYGON}"
+									  width="40" height="40"
+									  buttonMode="true"
+									  click="activateDrawTool(event)"
+									  rollOut="icon_rollOutHandler(event)"
+									  rollOver="icon_rollOverHandler(event)"
+									  source="assets/images/i_draw_freepoly.png"
+									  toolTip="{freehandPolygonLabel}"
+									  useHandCursor="true"/>
+						</s:HGroup>
+					</s:VGroup>
+				</s:HGroup>				
+				<s:Label width="100%"
+						 includeInLayout="{useCurrentExtentAsAIO}"
+						 text="{dataCurrentExtentLabel}"
+						 visible="{useCurrentExtentAsAIO}"/>
+				
+				<s:VGroup width="380" height="240"
+						  gap="0"
+						  includeInLayout="{exposeLayers}"
+						  visible="{exposeLayers}">
+					<s:Label paddingTop="14" text="{step2Label}" styleName="HeaderTextStyle"/>					
+					<!--toc start-->
+					<s:Scroller width="100%" height="100%" visible="true" >						
+					<s:VGroup id="showTOC"
+							  visible="true"
+							  gap="1"
+							  height="100%"
+							  paddingTop="1"
+							  width="100%">
+						<s:HGroup gap="1" verticalAlign="middle" visible="{alphaVis}" includeInLayout="{alphaVis}">
+							<!-- <s:Label styleName="WidgetText" text="Layer Visibility" paddingLeft="6"/>
+							<mx:Image source="{alphaIcon}" width="20" height="20" toolTip="{AlphaToolTip}"/>
+							<s:HSlider id="slider" 
+									   minimum="0" 
+									   maximum="1"
+									   change="setLayerAlpha()"
+									   dataTipFormatFunction="sldrDataTipFormatter"
+									   liveDragging="true"
+									   snapInterval="0.001" 
+									   skinClass="widgets.FrClipAndShip.alphaSliderSkin"
+									   enabled="{layerIsSelected}"/> -->
+						</s:HGroup>
+						<s:Scroller id="scr" width="100%" height="100%">						
+							<s:Group>
+								<s:layout>
+									<s:VerticalLayout gap="1"/>
+								</s:layout>
+								<s:HGroup id="boxMessage"
+										  width="100%"
+										  includeInLayout="false"
+										  visible="false" 
+										  verticalAlign="middle"
+										  horizontalAlign="center">
+									<mx:Image id="swfMessage"
+											  source="widgets/FrClipAndShip/assets/images/loader.swf"/>
+									<s:Label id="txtMessage"
+											 width="90%"
+											 text="{GeneratingLegendMsg}"/>
+								</s:HGroup>								
+								<mx:HBox width="370" height="205"  verticalScrollPolicy="on">									
+								<toccomp:TOC id="toc"
+											 width="100%"
+											 height="100%"
+											 itemRollOver="setLastTreeItem(event)"
+											 itemClick="setSelectedTreeItem(event)"
+											 metadataToolTip="{MetadataToolTip}"
+											 showMetadataButton="{showDesc}"
+											 expanded="{expanded}"
+											 legendCollapsed="{legendCollapsed}"
+											 liveScrolling="false"
+											 variableRowHeight="true"
+											 tocMinWidth="{wTemplate.width - 70}"
+											 scroller="{scr}"
+											 loader="{boxMessage}"/>
+								</mx:HBox>
+							</s:Group>
+						</s:Scroller>
+					</s:VGroup>
+					</s:Scroller>					
+				</s:VGroup>				
+				<s:VGroup width="100%" height="100%">
+					<!--<s:Line width="100%"
+							includeInLayout="{exposeLayers}"
+							visible="{exposeLayers}">
+						<s:stroke>
+							<s:SolidColorStroke color="0xEEEEEE" weight="2"/>
+						</s:stroke>
+					</s:Line>-->
+					
+					<s:Label paddingTop="2" text="{step3Label}" styleName="HeaderTextStyle"/>
+					<s:HGroup width="100%">
+						<s:Label paddingLeft="17"/>
+						<s:DropDownList id="formatDDL"										
+										width="100%"
+										change="formatDDL_changeHandler(event)"
+										requireSelection="true"/>
+					</s:HGroup>
+					
+					<s:Label includeInLayout="{rasterFormatChoiceListVisible}"					
+							 paddingTop="4"
+							 text="{step4Label}"
+							 visible="{rasterFormatChoiceListVisible}" styleName="HeaderTextStyle"/>
+					<s:HGroup width="100%">
+						<s:Label paddingLeft="17"/>
+						<s:DropDownList id="rasterFormatDDL"
+									width="100%"
+									includeInLayout="{rasterFormatChoiceListVisible}"
+									requireSelection="true"
+									visible="{rasterFormatChoiceListVisible}"/>
+					</s:HGroup>
+					
+					<s:Label includeInLayout="{spatialReferenceChoiceListVisible}"
+							 paddingTop="4"
+							 text="{step5Label}"
+							 visible="{spatialReferenceChoiceListVisible}" styleName="HeaderTextStyle"/>
+					<s:HGroup width="100%">
+						<s:Label paddingLeft="17"/>
+						<s:DropDownList id="spatialReferenceDDL"
+									width="100%"									
+									includeInLayout="{spatialReferenceChoiceListVisible}"
+									requireSelection="true"
+									visible="{spatialReferenceChoiceListVisible}"/>
+					</s:HGroup>
+					<s:HGroup width="100%" verticalAlign="middle">
+						<s:Label paddingLeft="17"/>
+						<s:Button id="extract"
+								  click="callGPService()"
+								  horizontalCenter="0"
+								  left="10"
+								  label="{extractButtonLabel}"/>
+						<mx:Image id="swfMessage2"
+								  source="assets/images/loader.swf"
+								  visible="false"/>
+						<s:Label id="txtMessage2"
+								 width="98%"
+								 text=""/>
+					</s:HGroup>
+				</s:VGroup>
+			</s:VGroup>
+		</s:Scroller>
+    </viewer:WidgetTemplate>
+</viewer:BaseWidget>
